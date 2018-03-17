@@ -1,0 +1,50 @@
+import tensorflow as tf
+
+
+""" read mnist data set from tensorflow """
+from tensorflow.examples.tutorials.mnist import input_data
+mnist_data = input_data.read_data_sets("mnist/data/", one_hot=True)
+
+
+""" making model """
+
+X = tf.placeholder(tf.float32, [None, 784])
+Y = tf.placeholder(tf.float32, [None, 10])
+
+
+layers = {}
+
+layers['W1'] = tf.Variable(tf.random_normal([784, 256], stddev=0.01))
+layers['L1'] = tf.nn.relu(tf.matmul(X, layers['W1']))
+
+layers['W2'] = tf.Variable(tf.random_normal([256, 256], stddev=0.01))
+layers['L2'] = tf.nn.relu(tf.matmul(layers['L1'], layers['W2']))
+
+layers['W3'] = tf.Variable(tf.random_normal([256, 10], stddev=0.01))
+model = tf.matmul(layers['L2'], layers['W3'])
+
+cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=model, labels=Y))
+optimizer = tf.train.AdamOptimizer(0.001)
+train = optimizer.minimize(cost)
+
+""" running model """
+with tf.Session() as sess:
+    sess.run(tf.global_variables_initializer())
+
+    batch_size = 100
+    total_batch = int(mnist_data.train.num_examples / batch_size)
+
+    for epoch in range(20):
+        total_cost = 0
+
+        for i in range(total_batch):
+            x_data, y_data = mnist_data.train.next_batch(batch_size)
+
+            _, cost_val = sess.run([train, cost], feed_dict={X: x_data, Y: y_data})
+            total_cost += cost_val
+
+        print('Epoch:', '%04d' % (epoch+1), 'cost =', '{:.3f}'.format(total_cost))
+
+    is_correct = tf.equal(tf.argmax(model, 1), tf.argmax(Y, 1))
+    accuracy = tf.reduce_mean(tf.cast(is_correct, tf.float32))
+    print('accuracy: ', sess.run(accuracy, feed_dict={X: mnist_data.test.images, Y: mnist_data.test.labels}))
